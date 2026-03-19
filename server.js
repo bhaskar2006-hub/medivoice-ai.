@@ -100,8 +100,8 @@ Patient context: T2DM, HTN, Metformin + Amlodipine, NKDA, premature CAD family h
 
   try {
     const { default: fetch } = await import('node-fetch');
-    // Using gemini-1.5-flash for better free-tier availability
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+    // Using v1 stable API for better model availability
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
     
     const resp = await fetch(url, {
       method:  'POST',
