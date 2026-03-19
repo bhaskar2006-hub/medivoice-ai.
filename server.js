@@ -44,24 +44,31 @@ app.post('/api/murf/speak', async (req, res) => {
 
   try {
     const { default: fetch } = await import('node-fetch');
+    // hi-IN voices often don't support GEN2 or special styles
+    const isIntl = !voiceId.startsWith('en-'); 
+    
     const murf = await fetch('https://api.murf.ai/v1/speech/generate', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'api-key': murfKey },
       body: JSON.stringify({
         text:         clean,
         voiceId:      voiceId,
-        style:        style || 'Conversational',
-        modelVersion: 'GEN2',
+        style:        isIntl ? 'Default' : (style || 'Conversational'),
+        modelVersion: isIntl ? 'GEN1' : 'GEN2',
         format:       'MP3',
-        rate:         -5,
+        rate:         0, 
         pitch:        0,
-        sampleRate:   44100
+        sampleRate:   24000 // Safer sample rate
       })
     });
 
     if (!murf.ok) {
-      const err = await murf.json().catch(() => ({}));
-      const msg = err.message || err.error || `Murf HTTP ${murf.status}`;
+      const errBody = await murf.text().catch(() => 'No body');
+      console.error(`Murf API Error (${murf.status}):`, errBody);
+      
+      let msg = `Murf HTTP ${murf.status}`;
+      try { const j = JSON.parse(errBody); msg = j.message || j.error || msg; } catch(x){}
+
       if (murf.status === 401 || murf.status === 403)
         return res.status(401).json({ error: 'Invalid Murf API key' });
       if (murf.status === 402)
