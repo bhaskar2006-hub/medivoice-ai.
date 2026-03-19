@@ -107,10 +107,7 @@ Patient context: T2DM, HTN, Metformin + Amlodipine, NKDA, premature CAD family h
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `${system}\n\nPatient says: "${transcript}"` }] }],
-        generationConfig: {
-          response_mime_type: 'application/json'
-        }
+        contents: [{ parts: [{ text: `${system}\n\nPatient says: "${transcript}"` }] }]
       })
     });
 
@@ -120,7 +117,9 @@ Patient context: T2DM, HTN, Metformin + Amlodipine, NKDA, premature CAD family h
     }
 
     const data = await resp.json();
-    const raw  = data.candidates[0].content.parts[0].text.trim();
+    const text = data.candidates[0].content.parts[0].text.trim();
+    // Strip markdown backticks if Gemini adds them
+    const raw  = text.replace(/```json|```/g, '').trim(); 
     res.json(JSON.parse(raw));
 
   } catch (e) {
