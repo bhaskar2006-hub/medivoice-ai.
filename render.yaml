@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: medivoice-ai
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: MURF_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
