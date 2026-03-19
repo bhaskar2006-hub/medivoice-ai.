@@ -83,9 +83,9 @@ app.post('/api/murf/speak', async (req, res) => {
 
 // ── AI Analysis proxy (keeps API key server-side) ─────────────
 app.post('/api/ai/analyze', async (req, res) => {
-  const aiKey = process.env.DEEPSEEK_API_KEY;
+  const aiKey = process.env.GROQ_API_KEY;
   if (!aiKey) {
-    return res.status(500).json({ error: 'DEEPSEEK_API_KEY not set on server' });
+    return res.status(500).json({ error: 'GROQ_API_KEY not set on server' });
   }
 
   const { transcript } = req.body;
@@ -100,12 +100,12 @@ Patient context: T2DM, HTN, Metformin + Amlodipine, NKDA, premature CAD family h
 
   try {
     const { default: fetch } = await import('node-fetch');
-    // Using DeepSeek (OpenAI compatible)
-    const resp = await fetch('https://api.deepseek.com/chat/completions', {
+    // Using Groq (OpenAI compatible)
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiKey}` },
       body: JSON.stringify({
-        model:       'deepseek-chat',
+        model:       'llama-3.3-70b-versatile',
         messages:    [{ role: 'system', content: system }, { role: 'user', content: `Patient says: "${transcript}"` }],
         temperature: 0.1,
         response_format: { type: 'json_object' }
@@ -134,6 +134,6 @@ app.get('*', (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\n🏥 MediVoice AI running on port ${PORT}`);
-  console.log(`   DeepSeek key: ${process.env.DEEPSEEK_API_KEY ? '✓ loaded' : '✗ MISSING'}`);
-  console.log(`   Murf key:     ${process.env.MURF_API_KEY   ? '✓ loaded' : '✗ MISSING'}\n`);
+  console.log(`   Groq key:   ${process.env.GROQ_API_KEY ? '✓ loaded' : '✗ MISSING'}`);
+  console.log(`   Murf key:   ${process.env.MURF_API_KEY ? '✓ loaded' : '✗ MISSING'}\n`);
 });
