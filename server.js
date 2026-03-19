@@ -81,11 +81,11 @@ app.post('/api/murf/speak', async (req, res) => {
   }
 });
 
-// ── Claude proxy (keeps API key server-side) ─────────────────
-app.post('/api/claude/analyze', async (req, res) => {
-  const claudeKey = process.env.ANTHROPIC_API_KEY;
-  if (!claudeKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set on server' });
+// ── Gemini proxy (keeps API key server-side) ─────────────────
+app.post('/api/gemini/analyze', async (req, res) => {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) {
+    return res.status(500).json({ error: 'GEMINI_API_KEY not set on server' });
   }
 
   const { transcript } = req.body;
@@ -100,28 +100,31 @@ Patient context: T2DM, HTN, Metformin + Amlodipine, NKDA, premature CAD family h
 
   try {
     const { default: fetch } = await import('node-fetch');
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    // Using gemini-2.0-flash as the latest high-speed model
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+    
+    const resp = await fetch(url, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:      'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system,
-        messages: [{ role: 'user', content: `Patient says: "${transcript}"` }]
+        contents: [{ parts: [{ text: `${system}\n\nPatient says: "${transcript}"` }] }],
+        generationConfig: {
+          response_mime_type: 'application/json'
+        }
       })
     });
 
     if (!resp.ok) {
       const e = await resp.json().catch(() => ({}));
-      return res.status(resp.status).json({ error: e.error?.message || `Claude error ${resp.status}` });
+      return res.status(resp.status).json({ error: e.error?.message || `Gemini error ${resp.status}` });
     }
 
     const data = await resp.json();
-    const raw  = data.content[0].text.replace(/```json|```/g, '').trim();
+    const raw  = data.candidates[0].content.parts[0].text.trim();
     res.json(JSON.parse(raw));
 
   } catch (e) {
-    console.error('Claude proxy error:', e.message);
+    console.error('Gemini proxy error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
@@ -132,7 +135,7 @@ app.get('*', (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`\n🏥 MediVoice AI running on http://localhost:${PORT}`);
-  console.log(`   Anthropic key: ${process.env.ANTHROPIC_API_KEY ? '✓ loaded' : '✗ MISSING'}`);
-  console.log(`   Murf key:      ${process.env.MURF_API_KEY      ? '✓ loaded' : '✗ MISSING'}\n`);
+  console.log(`\n🏥 MediVoice AI running on port ${PORT}`);
+  console.log(`   Gemini key: ${process.env.GEMINI_API_KEY ? '✓ loaded' : '✗ MISSING'}`);
+  console.log(`   Murf key:   ${process.env.MURF_API_KEY   ? '✓ loaded' : '✗ MISSING'}\n`);
 });
