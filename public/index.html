@@ -477,7 +477,7 @@ async function analyzeInput(){
   addPatientMsg(text);document.getElementById('ifield').value='';
   var tid=showTyping();
   try{
-    var result=await callGemini(text);
+    var result=await callAI(text);
     removeEl(tid);
     var uid=renderAIMsg(result);
     updateSidebar(result);
@@ -490,10 +490,10 @@ async function analyzeInput(){
   document.getElementById('sendbtn').disabled=false;
 }
 function buildSpeakText(r){var p=[];if(r.triage&&r.triage.label)p.push('Triage: '+r.triage.label+'.');if(r.assessment)p.push(r.assessment);if(r.alert)p.push(r.alert);if(r.actions&&r.actions.length){var u=r.actions.filter(function(a){return a.urgency==='urgent';}).map(function(a){return a.label;});if(u.length)p.push('Urgent actions: '+u.join(', ')+'.');}var s=p.join(' ').trim();return s.length>900?s.substring(0,897)+'...':s;}
-// ── Gemini via server proxy ──────────────────────────────────
-async function callGemini(transcript){
-  var r=await fetch(BASE+'/api/gemini/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:transcript})});
-  if(!r.ok){var e={};try{e=await r.json();}catch(x){}throw new Error(e.error||'Gemini error '+r.status);}
+// ── AI via server proxy ──────────────────────────────────
+async function callAI(transcript){
+  var r=await fetch(BASE+'/api/ai/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:transcript})});
+  if(!r.ok){var e={};try{e=await r.json();}catch(x){}throw new Error(e.error||'AI error '+r.status);}
   return await r.json();
 }
 // ── RENDER ─────────────────────────────────────────────────────

@@ -81,11 +81,11 @@ app.post('/api/murf/speak', async (req, res) => {
   }
 });
 
-// ── Gemini proxy (keeps API key server-side) ─────────────────
-app.post('/api/gemini/analyze', async (req, res) => {
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY not set on server' });
+// ── AI Analysis proxy (keeps API key server-side) ─────────────
+app.post('/api/ai/analyze', async (req, res) => {
+  const aiKey = process.env.OPENAI_API_KEY;
+  if (!aiKey) {
+    return res.status(500).json({ error: 'OPENAI_API_KEY not set on server' });
   }
 
   const { transcript } = req.body;
@@ -100,30 +100,29 @@ Patient context: T2DM, HTN, Metformin + Amlodipine, NKDA, premature CAD family h
 
   try {
     const { default: fetch } = await import('node-fetch');
-    // Using v1 stable API for better model availability
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
-    
-    const resp = await fetch(url, {
+    // Using GPT-4o-mini for speed and stability
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiKey}` },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `${system}\n\nPatient says: "${transcript}"` }] }]
+        model:       'gpt-4o-mini',
+        messages:    [{ role: 'system', content: system }, { role: 'user', content: `Patient says: "${transcript}"` }],
+        temperature: 0.1,
+        response_format: { type: 'json_object' }
       })
     });
 
     if (!resp.ok) {
       const e = await resp.json().catch(() => ({}));
-      return res.status(resp.status).json({ error: e.error?.message || `Gemini error ${resp.status}` });
+      return res.status(resp.status).json({ error: e.error?.message || `AI error ${resp.status}` });
     }
 
     const data = await resp.json();
-    const text = data.candidates[0].content.parts[0].text.trim();
-    // Strip markdown backticks if Gemini adds them
-    const raw  = text.replace(/```json|```/g, '').trim(); 
+    const raw  = data.choices[0].message.content.trim();
     res.json(JSON.parse(raw));
 
   } catch (e) {
-    console.error('Gemini proxy error:', e.message);
+    console.error('AI proxy error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
@@ -135,6 +134,6 @@ app.get('*', (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\n🏥 MediVoice AI running on port ${PORT}`);
-  console.log(`   Gemini key: ${process.env.GEMINI_API_KEY ? '✓ loaded' : '✗ MISSING'}`);
+  console.log(`   OpenAI key: ${process.env.OPENAI_API_KEY ? '✓ loaded' : '✗ MISSING'}`);
   console.log(`   Murf key:   ${process.env.MURF_API_KEY   ? '✓ loaded' : '✗ MISSING'}\n`);
 });
